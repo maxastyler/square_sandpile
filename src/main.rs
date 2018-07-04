@@ -5,10 +5,23 @@ use ndarray::{Array, Array2, ArrayView2, ArrayViewMut2};
 
 fn topple(mut pile: ArrayViewMut2<i64>) -> Array2<i64> {
     // Topples a sandpile, using the edges as sinks.
+    let dim = (pile.shape()[0], pile.shape()[1]);
     let mut collapse_queue: Vec<(usize, usize)> = vec!();
     while let Some(next_pos) = get_first_untoppled(&pile.view()) {
         pile[next_pos]-=4;
-        for i in get_surrounding(next_pos).iter() { collapse_queue.push(*i); }
+        for i in get_surrounding(next_pos).iter() {
+            pile[*i]+=1;
+            if !on_rect_edge(*i, dim) && pile[*i]>=4 {collapse_queue.push(*i)}
+        }
+        while let Some(i) = collapse_queue.pop() {
+            if pile[i] >= 4 {
+                pile[i] -= 4;
+                for j in get_surrounding(i).iter() {
+                    pile[*j]+=1;
+                    if !on_rect_edge(*j, dim) && pile[*j]>=4 {collapse_queue.push(*j)}
+                }
+            }
+        }
     }
     Array::<i64, _>::zeros([3, 4])
 }
@@ -34,8 +47,9 @@ fn get_surrounding(pos: (usize, usize)) -> [(usize, usize); 4]{
 
 fn main() {
     let mut a: Array2<i64> = Array::zeros((10, 10));
-    a[[2, 2]] = 6;
-    a[[3, 2]] = 5;
-    topple(a.slice_mut(s![0..3, 0..4]));
-    println!("{:?}", get_first_untoppled(&a.slice(s!(0.., 0..))));
+    a[[5, 5]] = 100000;
+    topple(a.view_mut());
+    println!("{:?}", a);
+    let b: i64 = a.iter().sum();
+    println!("{}", b);
 }
