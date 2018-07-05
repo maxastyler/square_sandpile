@@ -1,9 +1,12 @@
 #[macro_use]
 extern crate ndarray;
+extern crate image;
+extern crate rayon;
 
 use ndarray::{Array, Array2, ArrayView2, ArrayViewMut2};
+use rayon::prelude::*;
 
-fn topple(mut pile: ArrayViewMut2<i64>) -> Array2<i64> {
+fn topple(mut pile: ArrayViewMut2<i64>) {
     // Topples a sandpile, using the edges as sinks.
     let dim = (pile.shape()[0], pile.shape()[1]);
     let mut collapse_queue: Vec<(usize, usize)> = vec!();
@@ -23,7 +26,42 @@ fn topple(mut pile: ArrayViewMut2<i64>) -> Array2<i64> {
             }
         }
     }
-    Array::<i64, _>::zeros([3, 4])
+}
+
+fn topple_threaded(mut pile: &mut Array2<i64>, n: usize) {
+    // Break in to n parts which are threaded
+    let x = pile.shape()[0];
+    let y = pile.shape()[1];
+    let mut sizes = vec!{};
+    for _ in 0..n {sizes.push(x/n)}
+    for i in 0..(x%n) {sizes[i]+=1}
+    let mut pos = vec!{};
+    pos.push(0);
+    for i in 0..n {
+        let a = pos[i];
+        pos.push(a+sizes[i]);
+    }
+    let positions: Vec<(usize, usize)> = pos.iter().zip(pos.iter().skip(1)).map(|(&x, &y)| (x, y)).collect();
+    let mut inside_bounds = vec!{};
+    for i in 0..n {
+        if i!=0 { inside_bounds.push(positions[i].0-1)}
+        if i!=(n-1) {inside_bounds.push(positions[i].1)};
+    }
+    let mut boundary_pairs: Vec<(usize, usize)> = vec!{};
+    for i in 0..inside_bounds.len()/2 {
+        boundary_pairs.push((inside_bounds.pop().unwrap(), inside_bounds.pop().unwrap()));
+    }
+    while let Some(_) = get_first_untoppled(&pile.view()) {
+        // for bounds in positions.par_iter() {
+        //     topple(pile.slice_mut(s!((bounds.0)..(bounds.1), 0..y)));
+        // }
+        positions.iter().for_each(|bounds| {
+            topple(pile.slice_mut(s!((bounds.0)..(bounds.1), 0..y)))
+        });
+        for pair in boundary_pairs.iter() {
+            topple(pile.slice_mut(s!((pair.0-1)..(pair.1+1), 0..y)));
+        }
+    }
 }
 
 fn on_rect_edge(pos: (usize, usize), rect_dim: (usize, usize)) -> bool {
@@ -46,10 +84,24 @@ fn get_surrounding(pos: (usize, usize)) -> [(usize, usize); 4]{
 }
 
 fn main() {
-    let mut a: Array2<i64> = Array::zeros((10, 10));
-    a[[5, 5]] = 100000;
-    topple(a.view_mut());
-    println!("{:?}", a);
-    let b: i64 = a.iter().sum();
-    println!("{}", b);
+    let colours = vec![
+        [255,255,255],
+	      [229,208,255],
+        [204,163,255],
+        [191,139,255]];
+    let res = 205;
+    let mut a: Array2<i64> = Array::zeros((res, res));
+    a[[50, 50]] = 10000;
+    // topple(a.view_mut());
+    topple_threaded(&mut a, 1);
+    let mut imgbuf: image::ImageBuffer<image::Rgb<u8>, _>= image::ImageBuffer::new(res as u32, res as u32);
+    for (i, &n) in a.iter().enumerate() {
+       let x = i as u32 % res as u32;
+       let y = i as u32 / res as u32;
+       let pix = imgbuf.get_pixel_mut(x, y);
+       if n > 0 && n < 4 {
+           *pix = image::Rgb(colours[n as usize])
+       } else { *pix = image::Rgb(colours[0])}
+    }
+    imgbuf.save("sandpile.bmp").unwrap();
 }

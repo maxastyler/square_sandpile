@@ -5,3 +5,5 @@ authors = ["Max Tyler <mtyler88@gmail.com>"]
 
 [dependencies]
 ndarray = "*"
+image = "*"
+rayon = "*"
