@@ -83,25 +83,81 @@ fn get_surrounding(pos: (usize, usize)) -> [(usize, usize); 4]{
     [(pos.0-1, pos.1), (pos.0+1, pos.1), (pos.0, pos.1-1), (pos.0, pos.1+1)]
 }
 
-fn main() {
+fn single_point() {
+    // let colours = vec![
+    //     [255,255,255],
+	  //     [229,208,255],
+    //     [204,163,255],
+    //     [191,139,255]];
     let colours = vec![
-        [255,255,255],
-	      [229,208,255],
-        [204,163,255],
-        [191,139,255]];
-    let res = 205;
-    let mut a: Array2<i64> = Array::zeros((res, res));
-    a[[50, 50]] = 10000;
-    // topple(a.view_mut());
-    topple_threaded(&mut a, 1);
-    let mut imgbuf: image::ImageBuffer<image::Rgb<u8>, _>= image::ImageBuffer::new(res as u32, res as u32);
-    for (i, &n) in a.iter().enumerate() {
-       let x = i as u32 % res as u32;
-       let y = i as u32 / res as u32;
-       let pix = imgbuf.get_pixel_mut(x, y);
-       if n > 0 && n < 4 {
-           *pix = image::Rgb(colours[n as usize])
-       } else { *pix = image::Rgb(colours[0])}
+        [26, 83, 92],
+        [78, 205, 196],
+        [247, 255, 247],
+        [255, 107, 107],
+        [255, 230, 109]
+        ];
+    let mut n = 0;
+    loop {
+        println!("On {} now", n);
+        let res = 205;
+        let mut a: Array2<i64> = Array::zeros((res, res));
+        a[[102, 102]] = n*1050;
+        topple(a.view_mut());
+        //topple_threaded(&mut a, 1);
+        let mut imgbuf: image::ImageBuffer<image::Rgb<u8>, _>= image::ImageBuffer::new(res as u32, res as u32);
+        for (i, &n) in a.iter().enumerate() {
+            let x = i as u32 % res as u32;
+            let y = i as u32 / res as u32;
+            let pix = imgbuf.get_pixel_mut(x, y);
+            if n > 0 && n < 4 {
+                *pix = image::Rgb(colours[n as usize])
+            } else if n >= 4 { *pix = image::Rgb(colours[4])}
+            else { *pix = image::Rgb(colours[0])}
+        }
+        imgbuf.save(format!("sand_gif/sandpile_gif_{:04}.bmp", n)).unwrap();
+        n += 1;
+        if n>284 {break}
     }
-    imgbuf.save("sandpile.bmp").unwrap();
+}
+fn four_points() {
+    // let colours = vec![
+    //     [255,255,255],
+	  //     [229,208,255],
+    //     [204,163,255],
+    //     [191,139,255]];
+    let colours = vec![
+        [26, 83, 92],
+        [78, 205, 196],
+        [247, 255, 247],
+        [255, 107, 107],
+        [255, 230, 109]
+        ];
+    let mut n = 0;
+    loop {
+        println!("On {} now", n);
+        let res = 182;
+        let mut a: Array2<i64> = Array::zeros((res, res));
+        a[[60, 60]] = n*250;
+        a[[60, 121]] = n*250;
+        a[[121, 60]] = n*250;
+        a[[121, 121]] = n*250;
+        topple(a.view_mut());
+        //topple_threaded(&mut a, 1);
+        let mut imgbuf: image::ImageBuffer<image::Rgb<u8>, _>= image::ImageBuffer::new(res as u32, res as u32);
+        for (i, &n) in a.iter().enumerate() {
+            let x = i as u32 % res as u32;
+            let y = i as u32 / res as u32;
+            let pix = imgbuf.get_pixel_mut(x, y);
+            if n > 0 && n < 4 {
+                *pix = image::Rgb(colours[n as usize])
+            } else if n >= 4 { *pix = image::Rgb(colours[4])}
+            else { *pix = image::Rgb(colours[0])}
+        }
+        imgbuf.save(format!("four_points/sandpile_gif_{:04}.bmp", n)).unwrap();
+        n += 1;
+        if n>200 {break}
+    }
+}
+fn main() {
+    four_points();
 }
